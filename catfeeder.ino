@@ -3,12 +3,14 @@
 #include <RTClib.h>
 #include <RTC_DS3231.h>
 #include <SeeedRFIDLib.h>
+#include <Servo.h>
 
 
 RTC_DS3231 RTC;
 SeeedRFIDLib RFID(0, 0);
 RFIDTag tag;
 SerialCommand SCmd;
+Servo feedServo;
 
 void setup() {
 	Serial.begin(57600);
@@ -19,10 +21,13 @@ void setup() {
 		Serial.println("RTC is NOT running!");
 	}
 
+	feedServo.attach(20);
+
 	// commands
 	SCmd.addDefaultHandler(unrecognized);
-	SCmd.addCommand("setDate",setDate);
-	SCmd.addCommand("getDate",getDate);
+	SCmd.addCommand("setDate", cmdSetDate);
+	SCmd.addCommand("getDate",cmdGetDate);
+	SCmd.addCommand("moveServo", cmdMoveServo);
 
 }
 
@@ -38,7 +43,7 @@ void loop() {
 }
 
 
-void setDate(){
+void cmdSetDate(){
 	int dd;
 	int MM;
 	int yyyy;
@@ -126,8 +131,8 @@ void setDate(){
 	}
 }
 
-void getDate(){
-	DateTime now = RTC.now();
+void cmdGetDate(){
+	DateTime now = getDate();
 	Serial.print(now.day());
 	Serial.print(".");
 	Serial.print(now.month());
@@ -140,6 +145,33 @@ void getDate(){
 	Serial.print(":");
 	Serial.print(now.second());
 	Serial.println("");
+}
+
+DateTime getDate(){
+	return RTC.now();
+}
+
+// Serialcommand for moving servo
+void cmdMoveServo(){
+	char *arg = SCmd.next();
+	if (arg != NULL) {
+		uint8_t pos = atoi(arg);
+		moveServo(pos);
+	} 
+	else {
+		Serial.println("please give degrees from 0 to 180 for moving servo"); 
+		return;
+	}
+	
+}
+
+void moveServo(uint8_t pos){
+	if (pos >=0 && pos<= 180){
+    		feedServo.write(pos);
+    } else {
+		Serial.println("please give degrees from 0 to 180 for moving servo"); 
+		return;
+	}
 }
 
 void unrecognized()
