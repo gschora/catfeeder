@@ -4,6 +4,7 @@
 #include <RTC_DS3231.h>
 #include <SeeedRFIDLib.h>
 #include <Servo.h>
+#include "Adafruit_FRAM_I2C.h"
 
 
 RTC_DS3231 RTC;
@@ -11,6 +12,7 @@ SeeedRFIDLib RFID(0, 0);
 RFIDTag tag;
 SerialCommand SCmd;
 Servo feedServo;
+Adafruit_FRAM_I2C fram  = Adafruit_FRAM_I2C();
 
 void setup() {
 	Serial.begin(57600);
@@ -23,11 +25,18 @@ void setup() {
 
 	feedServo.attach(20);
 
+	fram.begin();
+
 	// commands
 	SCmd.addDefaultHandler(unrecognized);
+	SCmd.addCommand("getConfig", cmdGetConfig);
 	SCmd.addCommand("setDate", cmdSetDate);
 	SCmd.addCommand("getDate",cmdGetDate);
 	SCmd.addCommand("moveServo", cmdMoveServo);
+	SCmd.addCommand("setServoOpenDeg", cmdSetServoOpenDeg);
+	SCmd.addCommand("setServoCloseDeg", cmdSetServoCloseDeg);
+	SCmd.addCommand("setServoKeepOpenTime", cmdSetServoKeepOpenTime);
+	SCmd.addCommand("openCloseServo", cmdOpenCloseServo);
 
 }
 
@@ -42,6 +51,24 @@ void loop() {
 	  }
 }
 
+/*
+	commands in fram
+addr 	val
+0		servo max open degrees
+1 		servo min close degrees
+
+ */
+void cmdGetConfig(){
+	Serial.print("ServoOpenDeg: ");
+	Serial.print(fram.read8(0),DEC);
+	Serial.println("");
+	Serial.print("ServoCloseDeg: ");
+	Serial.print(fram.read8(1),DEC);
+	Serial.println("");
+	Serial.print("setServoKeepOpenTime: ");
+	Serial.print(fram.read8(2),DEC);
+	Serial.println("");
+}
 
 void cmdSetDate(){
 	int dd;
@@ -174,9 +201,73 @@ void moveServo(uint8_t pos){
 	}
 }
 
+void cmdSetServoOpenDeg(){
+	char *arg = SCmd.next();
+	if (arg != NULL) {
+		uint8_t pos = atoi(arg);
+		if (pos >=0 && pos<= 180){
+    		fram.write8(0, pos);
+    		cmdGetConfig();
+    	} else {
+			Serial.println("please give degrees from 0 to 180 for open servo"); 
+			return;
+		}
+	} 
+	else {
+		Serial.println("please give degrees from 0 to 180 for open servo"); 
+		return;
+	}
+}
+void cmdSetServoCloseDeg(){
+	char *arg = SCmd.next();
+	if (arg != NULL) {
+		uint8_t pos = atoi(arg);
+		if (pos >=0 && pos<= 180){
+    		fram.write8(1, pos);
+    		cmdGetConfig();
+    	} else {
+			Serial.println("please give degrees from 0 to 180 for close servo"); 
+			return;
+		}
+	} 
+	else {
+		Serial.println("please give degrees from 0 to 180 for close servo"); 
+		return;
+	}
+}
+
+void cmdSetServoKeepOpenTime(){
+	char *arg = SCmd.next();
+	if (arg != NULL) {
+		uint8_t t = atoi(arg);
+		fram.write8(2, t);
+		cmdGetConfig();
+	} 
+	else {
+		Serial.println("please the time in 100 millis the door should stay open"); 
+		return;
+	}
+}
+
+void cmdOpenCloseServo(){
+	moveServo(fram.read8(0));
+
+	delay(fram.read8(2)*100);
+
+	moveServo(fram.read8(1));
+}
+
 void unrecognized()
 {
-  Serial.println("command not understood! try something else like");
-  Serial.println("setDate");
-  Serial.println("getDate"); 
+  Serial.println("command not understood!");
+	Serial.println("available commands:");
+	Serial.println("getConfig");
+	Serial.println("setDate");
+	Serial.println("getDate");
+	Serial.println("moveServo");
+	Serial.println("setServoOpenDeg");
+	Serial.println("setServoCloseDeg");
+	Serial.println("setServoKeepOpenTime");
+	Serial.println("openCloseServo");
+	Serial.println("---------------------------------------"); 
 }
