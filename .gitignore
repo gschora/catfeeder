@@ -26,3 +26,5 @@
 *.exe
 *.out
 *.app
+catfeeder.sublime-project
+catfeeder.sublime-workspace
