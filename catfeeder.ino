@@ -1,10 +1,13 @@
 #include <SerialCommand.h>
 #include <Wire.h>
-// #include <SPI.h>
 #include <RTClib.h>
 #include <RTC_DS3231.h>
+#include <SeeedRFIDLib.h>
+
 
 RTC_DS3231 RTC;
+SeeedRFIDLib RFID(0, 0);
+RFIDTag tag;
 SerialCommand SCmd;
 
 void setup() {
@@ -27,13 +30,11 @@ void loop() {
 
 	SCmd.readSerial();
 
-	// int incomingByte;
-
-	// if (HWSERIAL.available() > 0) {
-	// 	incomingByte = HWSERIAL.read();
-	// 	Serial.print("rfid received: ");
-	// 	Serial.println(incomingByte, DEC);
-	// }
+	if(RFID.isIdAvailable()) {
+	    tag = RFID.readId();
+	    Serial.print("ID:       ");
+	    Serial.println(tag.id);
+	  }
 }
 
 
@@ -123,11 +124,6 @@ void setDate(){
 
 		getDate();
 	}
-
-	
-
-
-
 }
 
 void getDate(){
